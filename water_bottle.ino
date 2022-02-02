@@ -2,6 +2,7 @@
 SoftwareSerial BTserial(2, 3); // RX | TX
 #define echoPin 9 // attach pin D2 Arduino to pin Echo of HC-SR04
 #define trigPin 8 //attach pin D3 Arduino to pin Trig of HC-SR04
+#define LED 13
 
 // defines variables
 long duration; // variable for the duration of sound wave travel
@@ -14,6 +15,7 @@ float temperature ;    //Define the temperature float variable
 int sensor = 0;     // sensor middle pin on analog pin 0
 
 float water_remaining = 0;
+int waiting_mode = 0;
 
 char c = ' ';
 String s;
@@ -23,11 +25,17 @@ void setup(){
   pinMode(13, INPUT); // Sets the echoPin as an INPUT
   Serial.begin(9600);  //start the serial monitor 
   pinMode(13, OUTPUT);
-
+  digitalWrite(LED, LOW);
   // HC-05 default serial speed for commincation mode is 9600
   BTserial.begin(9600);  
 }
 
+void flip(){
+  digitalWrite(LED, HIGH);
+  delay(200);
+  digitalWrite(LED, LOW);
+  delay(200);
+}
 
 void get_temprature(){
   
@@ -49,17 +57,39 @@ void get_distance(){
     duration = pulseIn(echoPin, HIGH);
     // Calculating the distance
     distance = duration * 0.03445 / 2; // Speed of sound wave divided by 2 (go and back)
+    
 }
 
 void get_water_remaining(){
   water_remaining = 3.14159265 * 4.5 * 4.5 * (8 - distance);
-  
+  water_remaining = max(water_remaining, 0);
+  if (distance > 20 || distance < 0){
+    if (waiting_mode == 0) {
+      waiting_mode = 1;
+      Serial.println("Turn Waiting Mode On");
+    } 
+  } else{
+    if (waiting_mode == 1) {
+      waiting_mode = 0;
+      Serial.println("Turn Waiting Mode Off");
+      delay(5000);  //wait 5 second
+    } 
+  }
+  if (water_remaining < 50) {
+    flip();
+  }
 }
 
 void loop(){
     get_temprature();
     get_distance();
     get_water_remaining();
+
+    
+    if (waiting_mode == 1) {
+      return;
+    }
+
     Serial.print("Temprature: ");     // print read value 
     Serial.print(temperature);     // print read value 
     Serial.println("°C");   //print on the serial monitor "__value °C temperature"
@@ -76,10 +106,12 @@ void loop(){
 
 //    BTserial.print("temperature: "); 
     BTserial.print(temperature); 
+    BTserial.print(','); 
 //    BTserial.println("°C");   
 //    BTserial.print("Water remaining: "); 
     BTserial.print(water_remaining); 
 //    BTserial.println(" ml");
+    BTserial.print('\n'); 
     boolean isValidInput; 
     do { 
         if (BTserial.available()){
@@ -92,5 +124,5 @@ void loop(){
       
      } while ( isValidInput == true ); // Repeat the loop
   
-  delay(5000);  //wait 5 second
+  delay(1000);  //wait 5 second
 }
