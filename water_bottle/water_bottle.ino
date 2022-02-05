@@ -10,7 +10,8 @@ float distance; // variable for the distance measurement
 
 float temp;    //Define the temperature float variable
 int temp_sensor = 0;     // sensor middle pin on analog pin 0
-
+int distance_arr[10];
+int ptr = 0;
 float temperature ;    //Define the temperature float variable
 int sensor = 0;     // sensor middle pin on analog pin 0
 
@@ -56,8 +57,29 @@ void get_distance(){
     // Reads the echoPin, returns the sound wave travel time in microseconds
     duration = pulseIn(echoPin, HIGH);
     // Calculating the distance
-    distance = duration * 0.03445 / 2; // Speed of sound wave divided by 2 (go and back)
-    
+    distance_arr[ptr] = duration * 0.03445 / 2; // Speed of sound wave divided by 2 (go and back)
+    ptr += 1;
+    ptr %= 10;
+    // check the stability of water level
+    int i;
+    int mx = -1;
+    int mn = 1000;
+    for (i = 0; i < 10; i++){
+      if (distance_arr[i] > mx) {
+        mx = distance_arr[i];
+      } 
+      if (distance_arr[i] < mn) {
+        mn = distance_arr[i];
+      }
+    }
+
+    int diff = mx - mn;
+    Serial.println(mx);
+    Serial.println(mn);
+    if (diff < 3) {
+      distance = (mx + mn) / 2;
+    }
+      
 }
 
 void get_water_remaining(){
@@ -97,6 +119,7 @@ void loop(){
     
 //    Displays the distance on the Serial Monitor
     Serial.print("Distance: ");
+//    Serial.print(distance);
     Serial.print(distance);
     Serial.println(" cm");
     
