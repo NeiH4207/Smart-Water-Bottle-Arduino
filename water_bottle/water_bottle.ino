@@ -43,6 +43,9 @@ void get_temprature(){
   temperature = analogRead(temp_sensor);        // assigning the analog output to temperature
   
   temperature = temperature * 0.488758553;   // converting volts to degrees celsius ----- 0.48828125 = [(5V*1000)/1024]10
+  if (temperature > 80) {
+   flip();
+  }
 }
 
 void get_distance(){
