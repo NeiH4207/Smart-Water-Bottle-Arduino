@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h>
 SoftwareSerial BTserial(2, 3); // RX | TX
-#define echoPin 9 // attach pin D2 Arduino to pin Echo of HC-SR04
-#define trigPin 8 //attach pin D3 Arduino to pin Trig of HC-SR04
+#define echoPin 9 // attach pin D2 Arduino to pin Echo of HC-05
+#define trigPin 8 //attach pin D3 Arduino to pin Trig of HC-05
 #define LED 13
 
 // defines variables
@@ -15,7 +15,7 @@ int ptr = 0;
 float temperature ;    //Define the temperature float variable
 int sensor = 0;     // sensor middle pin on analog pin 0
 
-float water_remaining = 0;
+float water_level = 0;
 int waiting_mode = 0;
 
 char c = ' ';
@@ -31,24 +31,31 @@ void setup(){
   BTserial.begin(9600);  
 }
 
-void flip(){
+void fast_blink(){
   digitalWrite(LED, HIGH);
-  delay(200);
+  delay(100);
   digitalWrite(LED, LOW);
-  delay(200);
+  delay(100);
 }
 
-void get_temprature(){
+void slow_blink(){
+  digitalWrite(LED, HIGH);
+  delay(500);
+  digitalWrite(LED, LOW);
+  delay(500);
+}
+
+void set_temprature(){
   
   temperature = analogRead(temp_sensor);        // assigning the analog output to temperature
   
   temperature = temperature * 0.488758553;   // converting volts to degrees celsius ----- 0.48828125 = [(5V*1000)/1024]10
   if (temperature > 80) {
-   flip();
+   fast_blink();
   }
 }
 
-void get_distance(){
+void set_distance(){
   
   // Clears the trigPin condition
     digitalWrite(trigPin, LOW);
@@ -77,17 +84,15 @@ void get_distance(){
     }
 
     int diff = mx - mn;
-    Serial.println(mx);
-    Serial.println(mn);
     if (diff < 3) {
       distance = (mx + mn) / 2;
     }
       
 }
 
-void get_water_remaining(){
-  water_remaining = 3.14159265 * 4.5 * 4.5 * (8 - distance);
-  water_remaining = max(water_remaining, 0);
+void set_water_level(){
+  water_level = 3.14159265 * 4.5 * 4.5 * (8 - distance);
+  water_level = max(water_level, 0);
   if (distance > 20 || distance < 0){
     if (waiting_mode == 0) {
       waiting_mode = 1;
@@ -100,52 +105,52 @@ void get_water_remaining(){
       delay(5000);  //wait 5 second
     } 
   }
-  if (water_remaining < 50) {
-    flip();
+  if (water_level < 50) {
+    slow_blink();
   }
 }
 
 void loop(){
-    get_temprature();
-    get_distance();
-    get_water_remaining();
+    set_temprature();
+    set_distance();
+    set_water_level();
 
     
     if (waiting_mode == 1) {
       return;
     }
 
-    Serial.print("Temprature: ");     // print read value 
+//    Displays the temperature on the Serial Monitor
+    Serial.print("Temperature: ");     // print read value 
     Serial.print(temperature);     // print read value 
     Serial.println("°C");   //print on the serial monitor "__value °C temperature"
     
     
 //    Displays the distance on the Serial Monitor
     Serial.print("Distance: ");
-//    Serial.print(distance);
     Serial.print(distance);
     Serial.println(" cm");
     
-    Serial.print("Water remaining: ");
-    Serial.print(water_remaining);
+    Serial.print("Water level: ");
+    Serial.print(water_level);
     Serial.println(" ml");
 
-//    BTserial.print("temperature: "); 
+    // Send data to android app using BT serial
     BTserial.print(temperature); 
     BTserial.print(','); 
-//    BTserial.println("°C");   
-//    BTserial.print("Water remaining: "); 
-    BTserial.print(water_remaining); 
-//    BTserial.println(" ml");
+    BTserial.print(water_level); 
     BTserial.print('\n'); 
+
+    // Respond
     boolean isValidInput; 
     do { 
         if (BTserial.available()){
           byte c; // get the next character from the bluetooth serial port
           c = 0;
           c = BTserial.read(); // Execute the option based on the character recieved
-          Serial.print("Bluetooth respond: ");
-          Serial.println(c);
+          if (c == 'S') {
+            Serial.print("Successful!");
+          }
         }
       
      } while ( isValidInput == true ); // Repeat the loop
